@@ -1,0 +1,35 @@
+import cors from "cors";
+import express from "express";
+
+const app = express();
+
+/* -------------------- Middlewares -------------------- */
+
+app.use(
+  cors({
+    origin: true,
+    credentials: true,
+  }),
+);
+
+app.use(express.json());
+
+app.use(express.urlencoded({ extended: true }));
+
+/* -------------------- Health Check -------------------- */
+
+app.get("/", (_req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "Mini Kanban API is running",
+  });
+});
+
+app.get("/health", (_req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "Server is healthy",
+  });
+});
+
+export default app;

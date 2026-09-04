@@ -3,6 +3,7 @@ import express from "express";
 import userRouter from "./modules/user/user.route";
 import boardRouter from "./modules/board/board.routes";
 import boardMemberRouter from "./modules/board-member/board-member.routes";
+import taskRouter from "./modules/task/task.routes";
 
 const app = express();
 
@@ -23,6 +24,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/api/users", userRouter);
 app.use("/api/boards", boardRouter);
 app.use("/api", boardMemberRouter);
+app.use("/api", taskRouter);
 
 /* -------------------- Health Check -------------------- */
 

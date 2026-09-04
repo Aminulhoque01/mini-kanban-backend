@@ -31,7 +31,8 @@ model Board {
   owner   User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   members BoardMember[]
 
-  tasks Task[]
+  tasks   Task[]
+  columns Column[]
 }
 
 model BoardMember {
@@ -66,12 +67,33 @@ model Task {
   priority    TaskPriority @default(MEDIUM)
 
   boardId    String
+  columnId   String
   assigneeId String?
+
+  position Int @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  board    Board @relation(fields: [boardId], references: [id], onDelete: Cascade)
-  assignee User? @relation(fields: [assigneeId], references: [id], onDelete: SetNull)
+  board    Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  column   Column @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  assignee User?  @relation(fields: [assigneeId], references: [id], onDelete: SetNull)
+
+  @@index([boardId])
+  @@index([columnId, position])
 }
 
+model Column {
+  id       String @id @default(uuid())
+  name     String
+  boardId  String
+  position Int    @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  board Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  tasks Task[]
+
+  @@index([boardId])
+}

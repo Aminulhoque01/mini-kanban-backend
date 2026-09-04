@@ -2,6 +2,7 @@ import prisma from "../../lib/prisma";
 
 interface CreateTaskData {
   boardId: string;
+  columnId: string;
   title: string;
   description?: string;
   priority?: "LOW" | "MEDIUM" | "HIGH";
@@ -10,7 +11,15 @@ interface CreateTaskData {
 }
 
 export const createTask = async (data: CreateTaskData) => {
-  const { boardId, title, description, priority, assigneeId, userId } = data;
+  const {
+    boardId,
+    columnId,
+    title,
+    description,
+    priority,
+    assigneeId,
+    userId,
+  } = data;
 
   // 1. Check board exists
   const board = await prisma.board.findUnique({
@@ -36,35 +45,71 @@ export const createTask = async (data: CreateTaskData) => {
   });
 
   if (!isOwner && !isMember) {
-    throw new Error("You do not have permission to create tasks on this board");
+    throw new Error(
+      "You do not have permission to create tasks on this board"
+    );
   }
 
-  // 3. If assignee provided, check assignee is board member
-  if (assigneeId) {
-    const isAssigneeOwner = board.ownerId === assigneeId;
+  // 3. Check column belongs to this board
+  const column = await prisma.column.findFirst({
+    where: {
+      id: columnId,
+      boardId,
+    },
+  });
 
-    const isAssigneeMember = await prisma.boardMember.findUnique({
-      where: {
-        boardId_userId: {
-          boardId,
-          userId: assigneeId,
+  if (!column) {
+    throw new Error(
+      "Column not found or does not belong to this board"
+    );
+  }
+
+  // 4. If assignee provided, check assignee belongs to board
+  if (assigneeId) {
+    const isAssigneeOwner =
+      board.ownerId === assigneeId;
+
+    const isAssigneeMember =
+      await prisma.boardMember.findUnique({
+        where: {
+          boardId_userId: {
+            boardId,
+            userId: assigneeId,
+          },
         },
-      },
-    });
+      });
 
     if (!isAssigneeOwner && !isAssigneeMember) {
-      throw new Error("Assignee must be a member of this board");
+      throw new Error(
+        "Assignee must be a member of this board"
+      );
     }
   }
 
-  // 4. Create task
+  // 5. Get last task position in this column
+  const lastTask = await prisma.task.findFirst({
+    where: {
+      columnId,
+    },
+    orderBy: {
+      position: "desc",
+    },
+  });
+
+  const position = lastTask
+    ? lastTask.position + 1
+    : 0;
+
+  // 6. Create task
   const task = await prisma.task.create({
     data: {
       title,
       description,
       priority,
       boardId,
+      columnId,
       assigneeId,
+      position,
     },
     include: {
       assignee: {

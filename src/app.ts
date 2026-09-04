@@ -4,6 +4,7 @@ import userRouter from "./modules/user/user.route";
 import boardRouter from "./modules/board/board.routes";
 import boardMemberRouter from "./modules/board-member/board-member.routes";
 import taskRouter from "./modules/task/task.routes";
+import columnRouter from "./modules/column/column.routes";
 
 const app = express();
 
@@ -25,6 +26,7 @@ app.use("/api/users", userRouter);
 app.use("/api/boards", boardRouter);
 app.use("/api", boardMemberRouter);
 app.use("/api", taskRouter);
+app.use("/api", columnRouter);
 
 /* -------------------- Health Check -------------------- */
 

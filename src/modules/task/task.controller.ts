@@ -1,14 +1,15 @@
-
-
 import { Response } from "express";
 
-import { createTask, deleteTask, getBoardTasks, getTaskById, updateTask } from "./task.service";
+import {
+  createTask,
+  deleteTask,
+  getBoardTasks,
+  getTaskById,
+  updateTask,
+} from "./task.service";
 import { AuthRequest } from "../../middlewares/auth.middleware";
 
-export const create = async (
-  req: AuthRequest,
-  res: Response
-) => {
+export const create = async (req: AuthRequest, res: Response) => {
   try {
     if (!req.user) {
       return res.status(401).json({
@@ -26,12 +27,7 @@ export const create = async (
       });
     }
 
-    const {
-      title,
-      description,
-      priority,
-      assigneeId,
-    } = req.body;
+    const { title, description, priority, columnId, assigneeId } = req.body;
 
     if (!title) {
       return res.status(400).json({
@@ -40,9 +36,17 @@ export const create = async (
       });
     }
 
+    if (typeof columnId !== "string" || !columnId.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Column ID is required",
+      });
+    }
+
     const task = await createTask({
       boardId,
-      title,
+      columnId,
+      title: title.trim(),
       description,
       priority,
       assigneeId,
@@ -56,9 +60,7 @@ export const create = async (
     });
   } catch (error) {
     const message =
-      error instanceof Error
-        ? error.message
-        : "Something went wrong";
+      error instanceof Error ? error.message : "Something went wrong";
 
     return res.status(400).json({
       success: false,
@@ -67,11 +69,7 @@ export const create = async (
   }
 };
 
-
-export const getTasks = async (
-  req: AuthRequest,
-  res: Response
-) => {
+export const getTasks = async (req: AuthRequest, res: Response) => {
   try {
     if (!req.user) {
       return res.status(401).json({
@@ -100,10 +98,7 @@ export const getTasks = async (
     const pageNumber = Number(page);
     const limitNumber = Number(limit);
 
-    if (
-      !Number.isInteger(pageNumber) ||
-      pageNumber < 1
-    ) {
+    if (!Number.isInteger(pageNumber) || pageNumber < 1) {
       return res.status(400).json({
         success: false,
         message: "Page must be a positive integer",
@@ -121,22 +116,13 @@ export const getTasks = async (
       });
     }
 
-    const validStatuses = [
-      "TODO",
-      "IN_PROGRESS",
-      "DONE",
-    ];
+    const validStatuses = ["TODO", "IN_PROGRESS", "DONE"];
 
-    const validPriorities = [
-      "LOW",
-      "MEDIUM",
-      "HIGH",
-    ];
+    const validPriorities = ["LOW", "MEDIUM", "HIGH"];
 
     if (
       status &&
-      (typeof status !== "string" ||
-        !validStatuses.includes(status))
+      (typeof status !== "string" || !validStatuses.includes(status))
     ) {
       return res.status(400).json({
         success: false,
@@ -146,8 +132,7 @@ export const getTasks = async (
 
     if (
       priority &&
-      (typeof priority !== "string" ||
-        !validPriorities.includes(priority))
+      (typeof priority !== "string" || !validPriorities.includes(priority))
     ) {
       return res.status(400).json({
         success: false,
@@ -155,31 +140,16 @@ export const getTasks = async (
       });
     }
 
-    const result = await getBoardTasks(
-      boardId,
-      req.user.userId,
-      {
-        status: status as
-          | "TODO"
-          | "IN_PROGRESS"
-          | "DONE"
-          | undefined,
+    const result = await getBoardTasks(boardId, req.user.userId, {
+      status: status as "TODO" | "IN_PROGRESS" | "DONE" | undefined,
 
-        priority: priority as
-          | "LOW"
-          | "MEDIUM"
-          | "HIGH"
-          | undefined,
+      priority: priority as "LOW" | "MEDIUM" | "HIGH" | undefined,
 
-        assigneeId:
-          typeof assigneeId === "string"
-            ? assigneeId
-            : undefined,
+      assigneeId: typeof assigneeId === "string" ? assigneeId : undefined,
 
-        page: pageNumber,
-        limit: limitNumber,
-      }
-    );
+      page: pageNumber,
+      limit: limitNumber,
+    });
 
     return res.status(200).json({
       success: true,
@@ -189,9 +159,7 @@ export const getTasks = async (
     });
   } catch (error) {
     const message =
-      error instanceof Error
-        ? error.message
-        : "Something went wrong";
+      error instanceof Error ? error.message : "Something went wrong";
 
     return res.status(400).json({
       success: false,
@@ -200,11 +168,7 @@ export const getTasks = async (
   }
 };
 
-
-export const getTask = async (
-  req: AuthRequest,
-  res: Response
-) => {
+export const getTask = async (req: AuthRequest, res: Response) => {
   try {
     if (!req.user) {
       return res.status(401).json({
@@ -222,10 +186,7 @@ export const getTask = async (
       });
     }
 
-    const task = await getTaskById(
-      taskId,
-      req.user.userId
-    );
+    const task = await getTaskById(taskId, req.user.userId);
 
     return res.status(200).json({
       success: true,
@@ -234,9 +195,7 @@ export const getTask = async (
     });
   } catch (error) {
     const message =
-      error instanceof Error
-        ? error.message
-        : "Something went wrong";
+      error instanceof Error ? error.message : "Something went wrong";
 
     return res.status(404).json({
       success: false,
@@ -245,12 +204,7 @@ export const getTask = async (
   }
 };
 
-
-
-export const update = async (
-  req: AuthRequest,
-  res: Response
-) => {
+export const update = async (req: AuthRequest, res: Response) => {
   try {
     if (!req.user) {
       return res.status(401).json({
@@ -268,40 +222,20 @@ export const update = async (
       });
     }
 
-    const {
-      title,
-      description,
-      priority,
-      status,
-      assigneeId,
-    } = req.body;
+    const { title, description, priority, status, assigneeId } = req.body;
 
-    const validStatuses = [
-      "TODO",
-      "IN_PROGRESS",
-      "DONE",
-    ];
+    const validStatuses = ["TODO", "IN_PROGRESS", "DONE"];
 
-    const validPriorities = [
-      "LOW",
-      "MEDIUM",
-      "HIGH",
-    ];
+    const validPriorities = ["LOW", "MEDIUM", "HIGH"];
 
-    if (
-      priority !== undefined &&
-      !validPriorities.includes(priority)
-    ) {
+    if (priority !== undefined && !validPriorities.includes(priority)) {
       return res.status(400).json({
         success: false,
         message: "Invalid task priority",
       });
     }
 
-    if (
-      status !== undefined &&
-      !validStatuses.includes(status)
-    ) {
+    if (status !== undefined && !validStatuses.includes(status)) {
       return res.status(400).json({
         success: false,
         message: "Invalid task status",
@@ -310,8 +244,7 @@ export const update = async (
 
     if (
       title !== undefined &&
-      (typeof title !== "string" ||
-        title.trim().length === 0)
+      (typeof title !== "string" || title.trim().length === 0)
     ) {
       return res.status(400).json({
         success: false,
@@ -319,17 +252,13 @@ export const update = async (
       });
     }
 
-    const task = await updateTask(
-      taskId,
-      req.user.userId,
-      {
-        title: title?.trim(),
-        description,
-        priority,
-        status,
-        assigneeId,
-      }
-    );
+    const task = await updateTask(taskId, req.user.userId, {
+      title: title?.trim(),
+      description,
+      priority,
+      status,
+      assigneeId,
+    });
 
     return res.status(200).json({
       success: true,
@@ -338,9 +267,7 @@ export const update = async (
     });
   } catch (error) {
     const message =
-      error instanceof Error
-        ? error.message
-        : "Something went wrong";
+      error instanceof Error ? error.message : "Something went wrong";
 
     return res.status(400).json({
       success: false,
@@ -349,11 +276,7 @@ export const update = async (
   }
 };
 
-
-export const remove = async (
-  req: AuthRequest,
-  res: Response
-) => {
+export const remove = async (req: AuthRequest, res: Response) => {
   try {
     if (!req.user) {
       return res.status(401).json({
@@ -371,10 +294,7 @@ export const remove = async (
       });
     }
 
-    await deleteTask(
-      taskId,
-      req.user.userId
-    );
+    await deleteTask(taskId, req.user.userId);
 
     return res.status(200).json({
       success: true,
@@ -382,9 +302,7 @@ export const remove = async (
     });
   } catch (error) {
     const message =
-      error instanceof Error
-        ? error.message
-        : "Something went wrong";
+      error instanceof Error ? error.message : "Something went wrong";
 
     return res.status(400).json({
       success: false,

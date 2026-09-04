@@ -5,6 +5,7 @@ import {
   deleteTask,
   getBoardTasks,
   getTaskById,
+  moveTask,
   updateTask,
 } from "./task.service";
 import { AuthRequest } from "../../middlewares/auth.middleware";
@@ -307,6 +308,77 @@ export const remove = async (req: AuthRequest, res: Response) => {
     return res.status(400).json({
       success: false,
       message,
+    });
+  }
+};
+
+
+export const move = async (
+  req: AuthRequest,
+  res: Response
+) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+
+    const { taskId } = req.params;
+    const { columnId, position } = req.body;
+
+    // Task ID validation
+    if (typeof taskId !== "string") {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid task ID",
+      });
+    }
+
+    // Column ID validation
+    if (
+      typeof columnId !== "string" ||
+      !columnId.trim()
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Column ID is required",
+      });
+    }
+
+    // Position validation
+    if (
+      typeof position !== "number" ||
+      !Number.isInteger(position) ||
+      position < 0
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Position must be a non-negative integer",
+      });
+    }
+
+    const task = await moveTask({
+      taskId,
+      userId: req.user.userId,
+      columnId,
+      position,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Task moved successfully",
+      data: task,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Failed to move task",
     });
   }
 };

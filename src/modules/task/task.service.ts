@@ -421,3 +421,229 @@ export const deleteTask = async (
 
   return task;
 };
+
+
+interface MoveTaskData {
+  taskId: string;
+  userId: string;
+  columnId: string;
+  position: number;
+}
+
+export const moveTask = async (data: MoveTaskData) => {
+  const {
+    taskId,
+    userId,
+    columnId: targetColumnId,
+    position: requestedPosition,
+  } = data;
+
+  // 1. Find task
+  const task = await prisma.task.findUnique({
+    where: {
+      id: taskId,
+    },
+  });
+
+  if (!task) {
+    throw new Error("Task not found");
+  }
+
+  // 2. Check board access
+  const board = await prisma.board.findUnique({
+    where: {
+      id: task.boardId,
+    },
+  });
+
+  if (!board) {
+    throw new Error("Board not found");
+  }
+
+  const isOwner = board.ownerId === userId;
+
+  const isMember = await prisma.boardMember.findUnique({
+    where: {
+      boardId_userId: {
+        boardId: task.boardId,
+        userId,
+      },
+    },
+  });
+
+  if (!isOwner && !isMember) {
+    throw new Error(
+      "You do not have permission to move this task"
+    );
+  }
+
+  // 3. Check target column belongs to same board
+  const targetColumn = await prisma.column.findFirst({
+    where: {
+      id: targetColumnId,
+      boardId: task.boardId,
+    },
+  });
+
+  if (!targetColumn) {
+    throw new Error(
+      "Target column not found or does not belong to this board"
+    );
+  }
+
+  if (requestedPosition < 0) {
+    throw new Error("Position cannot be negative");
+  }
+
+  // 4. Same column movement
+  if (task.columnId === targetColumnId) {
+    const tasks = await prisma.task.findMany({
+      where: {
+        columnId: targetColumnId,
+      },
+      orderBy: {
+        position: "asc",
+      },
+    });
+
+    const oldIndex = tasks.findIndex(
+      (item) => item.id === taskId
+    );
+
+    if (oldIndex === -1) {
+      throw new Error("Task position not found");
+    }
+
+    const newIndex = Math.min(
+      requestedPosition,
+      tasks.length - 1
+    );
+
+    if (oldIndex !== newIndex) {
+      const reorderedTasks = [...tasks];
+
+      const [movedTask] = reorderedTasks.splice(
+        oldIndex,
+        1
+      );
+
+      reorderedTasks.splice(
+        newIndex,
+        0,
+        movedTask
+      );
+
+      await prisma.$transaction(
+        reorderedTasks.map((item, index) =>
+          prisma.task.update({
+            where: {
+              id: item.id,
+            },
+            data: {
+              position: index,
+            },
+          })
+        )
+      );
+    }
+
+    return prisma.task.findUnique({
+      where: {
+        id: taskId,
+      },
+      include: {
+        assignee: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
+  }
+
+  // 5. Moving to another column
+
+  // Get source column tasks
+  const sourceTasks = await prisma.task.findMany({
+    where: {
+      columnId: task.columnId,
+    },
+    orderBy: {
+      position: "asc",
+    },
+  });
+
+  // Get target column tasks
+  const targetTasks = await prisma.task.findMany({
+    where: {
+      columnId: targetColumnId,
+    },
+    orderBy: {
+      position: "asc",
+    },
+  });
+
+  // Remove task from source column
+  const updatedSourceTasks = sourceTasks.filter(
+    (item) => item.id !== taskId
+  );
+
+  // Target position cannot exceed current list length
+  const newTargetPosition = Math.min(
+    requestedPosition,
+    targetTasks.length
+  );
+
+  // Add task at requested position
+  const updatedTargetTasks = [...targetTasks];
+
+  updatedTargetTasks.splice(
+    newTargetPosition,
+    0,
+    task
+  );
+
+  // 6. Update both columns atomically
+  await prisma.$transaction([
+    ...updatedSourceTasks.map((item, index) =>
+      prisma.task.update({
+        where: {
+          id: item.id,
+        },
+        data: {
+          position: index,
+        },
+      })
+    ),
+
+    ...updatedTargetTasks.map((item, index) =>
+      prisma.task.update({
+        where: {
+          id: item.id,
+        },
+        data: {
+          columnId: targetColumnId,
+          position: index,
+        },
+      })
+    ),
+  ]);
+
+  // 7. Return moved task
+  return prisma.task.findUnique({
+    where: {
+      id: taskId,
+    },
+    include: {
+      assignee: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+    },
+  });
+};

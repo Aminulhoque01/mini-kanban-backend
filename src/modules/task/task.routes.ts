@@ -2,7 +2,7 @@
 
 import { Router } from "express";
 
-import { create, getTask, getTasks, remove, update } from "./task.controller";
+import { create, getTask, getTasks, move, remove, update } from "./task.controller";
 import { authenticate } from "../../middlewares/auth.middleware";
 
 const taskRouter = Router();
@@ -35,6 +35,12 @@ taskRouter.delete(
   "/tasks/:taskId",
   authenticate,
   remove
+);
+
+taskRouter.patch(
+  "/tasks/:taskId/move",
+  authenticate,
+  move
 );
 
 export default taskRouter;

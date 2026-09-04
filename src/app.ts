@@ -1,6 +1,7 @@
 import cors from "cors";
 import express from "express";
 import userRouter from "./modules/user/user.route";
+import boardRouter from "./modules/board/board.routes";
 
 const app = express();
 
@@ -19,6 +20,7 @@ app.use(express.urlencoded({ extended: true }));
 
 
 app.use("/api/users", userRouter);
+app.use("/api/boards", boardRouter);
 
 /* -------------------- Health Check -------------------- */
 

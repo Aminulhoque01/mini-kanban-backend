@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { getMe, loginUser, registerUser } from "./user.service";
+import { getAllUsers, getMe, loginUser, registerUser } from "./user.service";
 import prisma from "../../lib/prisma";
 import { AuthRequest } from "../../middlewares/auth.middleware";
 
@@ -73,6 +73,44 @@ export const getMeController = async (
         : "Something went wrong";
 
     return res.status(404).json({
+      success: false,
+      message,
+    });
+  }
+};
+
+export const getAllUsersController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const page = Math.max(Number(req.query.page) || 1, 1);
+
+    const limit = Math.min(
+      Math.max(Number(req.query.limit) || 10, 1),
+      100
+    );
+
+    const search =
+      typeof req.query.search === "string"
+        ? req.query.search.trim()
+        : undefined;
+
+    const result = await getAllUsers(page, limit, search);
+
+    return res.status(200).json({
+      success: true,
+      message: "Users fetched successfully",
+      data: result.users,
+      pagination: result.pagination,
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Something went wrong";
+
+    return res.status(500).json({
       success: false,
       message,
     });

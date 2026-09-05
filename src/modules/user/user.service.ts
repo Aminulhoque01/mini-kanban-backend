@@ -99,3 +99,67 @@ export const getMe = async (userId: string) => {
 
   return user;
 };
+
+
+export const getAllUsers = async (
+  page: number = 1,
+  limit: number = 10,
+  search?: string
+) => {
+  const skip = (page - 1) * limit;
+
+  const where = search
+    ? {
+        OR: [
+          {
+            name: {
+              contains: search,
+              mode: "insensitive" as const,
+            },
+          },
+          {
+            email: {
+              contains: search,
+              mode: "insensitive" as const,
+            },
+          },
+        ],
+      }
+    : {};
+
+  const [users, total] = await Promise.all([
+    prisma.user.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy: {
+        createdAt: "desc",
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    }),
+
+    prisma.user.count({
+      where,
+    }),
+  ]);
+
+  const totalPages = Math.ceil(total / limit);
+
+  return {
+    users,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages,
+      hasNextPage: page < totalPages,
+      hasPreviousPage: page > 1,
+    },
+  };
+};

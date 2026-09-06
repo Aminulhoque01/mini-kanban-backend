@@ -32,17 +32,48 @@ export const getMyBoards = async (ownerId: string) => {
 
 export const getBoardById = async (
   boardId: string,
-  ownerId: string
+  userId: string
 ) => {
   const board = await prisma.board.findFirst({
     where: {
       id: boardId,
-      ownerId,
+      OR: [
+        {
+          ownerId: userId,
+        },
+        {
+          members: {
+            some: {
+              userId,
+            },
+          },
+        },
+      ],
+    },
+    include: {
+      owner: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+      members: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+        },
+      },
     },
   });
 
   if (!board) {
-    throw new Error("Board not found");
+    throw new Error("Board not found or you don't have access");
   }
 
   return board;

@@ -20,9 +20,7 @@ export const getMyBoards = async (userId: string) => {
   const boards = await prisma.board.findMany({
     where: {
       OR: [
-        {
-          ownerId: userId,
-        },
+        { ownerId: userId },
         {
           members: {
             some: {
@@ -31,6 +29,15 @@ export const getMyBoards = async (userId: string) => {
           },
         },
       ],
+    },
+    include: {
+      owner: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
     },
     orderBy: {
       createdAt: "desc",

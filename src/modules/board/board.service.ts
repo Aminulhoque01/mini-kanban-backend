@@ -16,10 +16,21 @@ export const createBoard = async (data: CreateBoardData) => {
   return board;
 };
 
-export const getMyBoards = async (ownerId: string) => {
+export const getMyBoards = async (userId: string) => {
   const boards = await prisma.board.findMany({
     where: {
-      ownerId,
+      OR: [
+        {
+          ownerId: userId,
+        },
+        {
+          members: {
+            some: {
+              userId,
+            },
+          },
+        },
+      ],
     },
     orderBy: {
       createdAt: "desc",
@@ -35,7 +46,7 @@ export const getBoardById = async (
   userId: string
 ) => {
   const board = await prisma.board.findFirst({
-    where: {
+     where: {
       id: boardId,
       OR: [
         {
